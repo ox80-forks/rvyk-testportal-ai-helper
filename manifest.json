@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "TestPortal AI Helper",
+  "version": "1.0.0",
+  "description": "Helps solve quizzes on TestPortal.",
+  "permissions": ["scripting", "storage", "contextMenus"],
+  "host_permissions": ["*://*.testportal.net/*", "*://*.testportal.pl/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://*.testportal.net/*", "*://*.testportal.pl/*"],
+      "js": ["content.js"]
+    }
+  ]
+}
