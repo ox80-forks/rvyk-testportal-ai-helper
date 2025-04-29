@@ -667,8 +667,6 @@ async function observeQuestions() {
     );
   }
 
-  addConfigButton();
-
   const observer = new MutationObserver(async (mutations) => {
     const questionContainer =
       document.querySelector(".question-container") ||
@@ -721,42 +719,6 @@ async function observeQuestions() {
     );
     debugPageState();
   }
-}
-
-function addConfigButton() {
-  if (document.getElementById("tphelper-settings-btn")) {
-    return;
-  }
-
-  const configBtn = document.createElement("button");
-  configBtn.id = "tphelper-settings-btn";
-  configBtn.innerHTML = "⚙️";
-  configBtn.title = "Open TestPortal Helper Settings";
-  configBtn.style.cssText = `
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    background: #4285f4;
-    color: white;
-    border: none;
-    font-size: 24px;
-    cursor: pointer;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-    z-index: 9999;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  `;
-
-  document.body.appendChild(configBtn);
-
-  configBtn.addEventListener("click", (e) => {
-    e.preventDefault();
-    createConfigWindow();
-  });
 }
 
 if (document.readyState === "loading") {
