@@ -266,12 +266,12 @@ function getQuizData() {
 
   let question = "";
   const questionElement =
-    document.querySelector(".question_essence p") ||
     document.querySelector(".question_essence") ||
     document.querySelector(".problem-content");
 
   if (questionElement) {
-    question = questionElement.innerText || "";
+    question = questionElement.innerHTML || "";
+    question = question.replace(/\s+/g, " ").trim();
   }
 
   const answerElements =
@@ -361,6 +361,11 @@ async function analyzeQuestion(data) {
       );
     }
 
+    const tempElement = document.createElement("div");
+    tempElement.innerHTML = data.question;
+    const questionText =
+      tempElement.textContent || tempElement.innerText || data.question;
+
     const searchInstruction =
       "IMPORTANT: Find the answer to this question using web search. " +
       "Think carefully about your reasoning, analyzing each possible answer before making a decision. " +
@@ -373,18 +378,14 @@ async function analyzeQuestion(data) {
       : 'Return your answer in the following JSON format: { "answer": number of correct answer, "reasoning": "brief explanation" }';
 
     const prompt = isShort
-      ? `Test title: ${pageTitle}\n${searchInstruction}\nAnswer the quiz question. ${responseFormatInstruction}\nQuestion: ${
-          data.question
-        }${hasImage ? `\nImage: ${data.imageUrl}` : ""}`
+      ? `Test title: ${pageTitle}\n${searchInstruction}\nAnswer the quiz question. ${responseFormatInstruction}\nQuestion: ${questionText}${
+          hasImage ? `\nImage: ${data.imageUrl}` : ""
+        }`
       : isMulti
-      ? `Test title: ${pageTitle}\n${searchInstruction}\nAnswer the quiz question and indicate all correct answers. ${responseFormatInstruction}\nQuestion: ${
-          data.question
-        }${
+      ? `Test title: ${pageTitle}\n${searchInstruction}\nAnswer the quiz question and indicate all correct answers. ${responseFormatInstruction}\nQuestion: ${questionText}${
           hasImage ? `\nImage: ${data.imageUrl}` : ""
         }\nAnswers:\n${data.answers.map((a, i) => `${i + 1}. ${a}`).join("\n")}`
-      : `Test title: ${pageTitle}\n${searchInstruction}\nAnswer the quiz question and indicate the correct answer. ${responseFormatInstruction}\nQuestion: ${
-          data.question
-        }${
+      : `Test title: ${pageTitle}\n${searchInstruction}\nAnswer the quiz question and indicate the correct answer. ${responseFormatInstruction}\nQuestion: ${questionText}${
           hasImage ? `\nImage: ${data.imageUrl}` : ""
         }\nAnswers:\n${data.answers
           .map((a, i) => `${i + 1}. ${a}`)
@@ -432,7 +433,7 @@ async function analyzeQuestion(data) {
       requestOptions.plugins = [
         {
           id: "web",
-          search_prompt: `${pageTitle} - ${data.question}`,
+          search_prompt: `${pageTitle} - ${questionText}`,
         },
       ];
     }

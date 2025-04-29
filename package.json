@@ -6,7 +6,8 @@
     "build": "vite build",
     "dev": "vite",
     "copy-manifest": "node copy-dist.js",
-    "build-extension": "vite build && node copy-dist.js"
+    "build-extension": "vite build && node copy-dist.js",
+    "minify": "node build.js"
   },
   "dependencies": {},
   "devDependencies": {
@@ -14,6 +15,7 @@
     "@typescript-eslint/eslint-plugin": "^8.31.1",
     "@typescript-eslint/parser": "^8.31.1",
     "eslint": "^9.25.1",
+    "terser": "^5.30.0",
     "typescript": "^5.2.2",
     "vite": "^4.4.9"
   }
