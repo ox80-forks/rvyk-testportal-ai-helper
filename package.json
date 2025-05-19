@@ -9,14 +9,13 @@
     "build-extension": "vite build && node copy-dist.js",
     "minify": "node build.js"
   },
-  "dependencies": {},
   "devDependencies": {
-    "@types/node": "^22.15.3",
-    "@typescript-eslint/eslint-plugin": "^8.31.1",
-    "@typescript-eslint/parser": "^8.31.1",
-    "eslint": "^9.25.1",
-    "terser": "^5.30.0",
-    "typescript": "^5.2.2",
-    "vite": "^4.4.9"
+    "@types/node": "^22.15.19",
+    "@typescript-eslint/eslint-plugin": "^8.32.1",
+    "@typescript-eslint/parser": "^8.32.1",
+    "eslint": "^9.27.0",
+    "terser": "^5.39.2",
+    "typescript": "^5.8.3",
+    "vite": "^4.5.14"
   }
 }

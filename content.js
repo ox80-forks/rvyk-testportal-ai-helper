@@ -4,36 +4,92 @@ let OPENROUTER_API_KEY = "";
 
 console.log("[TestPortal Helper] Content script loaded!");
 
+const _AntiBlurScripts = {
+  Script: null
+};
+
+function ToggleAntiBlur(State) {
+  if (_AntiBlurScripts.Script) {
+    _AntiBlurScripts.Script.remove();
+    _AntiBlurScripts.Script = null;
+  }
+
+  if (State) {
+    _AntiBlurScripts.Script = document.createElement("script");
+    _AntiBlurScripts.Script.type = "text/javascript";
+    _AntiBlurScripts.Script.textContent = `
+      try {
+        const original = RegExp.prototype.test;
+        RegExp.prototype.test = function (s) {
+          if (
+            this.toString().includes("native code") &&
+            this.toString().includes("function")
+          ) {
+            return true;
+          }
+          const r = original.call(this, s);
+          return r;
+        };
+        document.hasFocus = function () {
+          return true;
+        };
+        console.log("[pageScript] Zaniechano szpiega");
+      } catch (error) {
+        console.error(error);
+        [
+      }
+    `;
+    document.body.appendChild(_AntiBlurScripts.Script);
+    
+    console.log("[TestPortal Helper] AntiBlur activated");
+  } else {
+    console.log("[TestPortal Helper] AntiBlur deactivated");
+  }
+}
+
+chrome.storage.sync.get(["antiBlur"], (Result) => {
+  if (Result.antiBlur !== undefined) {
+    ToggleAntiBlur(Result.antiBlur);
+    console.log("[TestPortal Helper] AntiBlur setting loaded:", Result.antiBlur);
+  }
+});
+
 async function loadSettings() {
-  return new Promise((resolve) => {
-    chrome.storage.sync.get(["apiKey", "model"], (result) => {
-      if (result.apiKey) {
-        OPENROUTER_API_KEY = result.apiKey;
+  return new Promise((Resolve) => {
+    chrome.storage.sync.get(["apiKey", "model", "antiBlur"], (Result) => {
+      if (Result.apiKey) {
+        OPENROUTER_API_KEY = Result.apiKey;
         console.log("[TestPortal Helper] API key loaded from settings");
       }
 
-      if (result.model) {
-        OPENROUTER_MODEL = result.model;
+      if (Result.model) {
+        OPENROUTER_MODEL = Result.model;
         console.log(
           "[TestPortal Helper] Model loaded from settings:",
           OPENROUTER_MODEL
         );
       }
 
-      resolve();
+      if (Result.antiBlur !== undefined) {
+        ToggleAntiBlur(Result.antiBlur);
+        console.log("[TestPortal Helper] AntiBlur setting loaded:", Result.antiBlur);
+      }
+
+      Resolve();
     });
   });
 }
 
-function saveSettings(settings) {
-  return new Promise((resolve) => {
-    chrome.storage.sync.set(settings, () => {
-      console.log("[TestPortal Helper] Settings saved:", settings);
+function saveSettings(Settings) {
+  return new Promise((Resolve) => {
+    chrome.storage.sync.set(Settings, () => {
+      console.log("[TestPortal Helper] Settings saved:", Settings);
 
-      if (settings.apiKey) OPENROUTER_API_KEY = settings.apiKey;
-      if (settings.model) OPENROUTER_MODEL = settings.model;
+      if (Settings.apiKey) OPENROUTER_API_KEY = Settings.apiKey;
+      if (Settings.model) OPENROUTER_MODEL = Settings.model;
+      if (Settings.antiBlur !== undefined) ToggleAntiBlur(Settings.antiBlur);
 
-      resolve();
+      Resolve();
     });
   });
 }
@@ -54,9 +110,9 @@ function createConfigWindow() {
     return;
   }
 
-  const configWindow = document.createElement("div");
-  configWindow.id = "tphelper-config";
-  configWindow.style.cssText = `
+  const ConfigWindow = document.createElement("div");
+  ConfigWindow.id = "tphelper-config";
+  ConfigWindow.style.cssText = `
     position: fixed;
     top: 20px;
     right: 20px;
@@ -71,13 +127,14 @@ function createConfigWindow() {
     overflow-y: auto;
   `;
 
-  let useWebSearch = localStorage.getItem("tph_web_search") !== "false";
-  let useCustomModel = OPENROUTER_MODEL.startsWith("custom:");
-  let customModelValue = useCustomModel
+  let UseWebSearch = localStorage.getItem("tph_web_search") !== "false";
+  let UseCustomModel = OPENROUTER_MODEL.startsWith("custom:");
+  let CustomModelValue = UseCustomModel
     ? OPENROUTER_MODEL.replace("custom:", "")
     : "";
+  let UseAntiBlur = localStorage.getItem("tph_anti_blur") !== "false";
 
-  const models = [
+  const Models = [
     { id: "openai/gpt-4.1-mini", name: "OpenAI GPT-4.1 Mini" },
     { id: "openai/gpt-4.1", name: "OpenAI GPT-4.1" },
     { id: "openai/gpt-4o-mini", name: "OpenAI GPT-4o Mini" },
@@ -111,7 +168,7 @@ function createConfigWindow() {
     { id: "_custom", name: "Custom model (specify below)" },
   ];
 
-  configWindow.innerHTML = `
+  ConfigWindow.innerHTML = `
     <h2 style="margin-top: 0; color: #333; font-size: 16px;">TestPortal Helper - Configuration</h2>
     
     <div style="margin-bottom: 12px;">
@@ -132,15 +189,15 @@ function createConfigWindow() {
         Model:
       </label>
       <select id="tph-model" style="width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ddd; border-radius: 4px;">
-        ${models
+        ${Models
           .map(
-            (model) =>
-              `<option value="${model.id}" ${
-                OPENROUTER_MODEL === model.id ||
-                (model.id === "_custom" && useCustomModel)
+            (Model) =>
+              `<option value="${Model.id}" ${
+                OPENROUTER_MODEL === Model.id ||
+                (Model.id === "_custom" && UseCustomModel)
                   ? "selected"
                   : ""
-              }>${model.name}</option>`
+              }>${Model.name}</option>`
           )
           .join("")}
       </select>
@@ -150,12 +207,12 @@ function createConfigWindow() {
     </div>
 
     <div id="tph-custom-model-container" style="margin-bottom: 12px; display: ${
-      useCustomModel ? "block" : "none"
+      UseCustomModel ? "block" : "none"
     };">
       <label for="tph-custom-model" style="display: block; margin-bottom: 5px; font-size: 14px; color: #555;">
         Custom model ID:
       </label>
-      <input type="text" id="tph-custom-model" value="${customModelValue}" 
+      <input type="text" id="tph-custom-model" value="${CustomModelValue}" 
         placeholder="e.g. mistralai/mistral-7b-instruct" 
         style="width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ddd; border-radius: 4px;">
       <small style="display: block; margin-top: 4px; color: #888; font-size: 11px;">
@@ -166,13 +223,26 @@ function createConfigWindow() {
     <div style="margin-bottom: 12px;">
       <label style="display: flex; align-items: center; font-size: 14px; color: #555;">
         <input type="checkbox" id="tph-web-search" ${
-          useWebSearch ? "checked" : ""
+          UseWebSearch ? "checked" : ""
         } 
           style="margin-right: 8px;">
         Use web search
       </label>
       <small style="display: block; margin-top: 4px; color: #888; font-size: 11px;">
         Search plugin costs $4 per 1000 results.
+      </small>
+    </div>
+    
+    <div style="margin-bottom: 12px;">
+      <label style="display: flex; align-items: center; font-size: 14px; color: #555;">
+        <input type="checkbox" id="tph-anti-blur" ${
+          UseAntiBlur ? "checked" : ""
+        } 
+          style="margin-right: 8px;">
+        Enable Anti-Blur
+      </label>
+      <small style="display: block; margin-top: 4px; color: #888; font-size: 11px;">
+        Prevents TestPortal from detecting when you switch tabs or windows.
       </small>
     </div>
     
@@ -186,50 +256,52 @@ function createConfigWindow() {
     </div>
   `;
 
-  document.body.appendChild(configWindow);
+  document.body.appendChild(ConfigWindow);
 
   document.getElementById("tph-model").addEventListener("change", (e) => {
-    const customModelContainer = document.getElementById(
+    const CustomModelContainer = document.getElementById(
       "tph-custom-model-container"
     );
     if (e.target.value === "_custom") {
-      customModelContainer.style.display = "block";
+      CustomModelContainer.style.display = "block";
     } else {
-      customModelContainer.style.display = "none";
+      CustomModelContainer.style.display = "none";
     }
   });
 
   document.getElementById("tph-save-config").addEventListener("click", () => {
-    const apiKey = document.getElementById("tph-api-key").value;
+    const ApiKey = document.getElementById("tph-api-key").value;
 
-    if (!apiKey.trim()) {
+    if (!ApiKey.trim()) {
       alert("API key is required for the extension to work!");
       document.getElementById("tph-api-key").style.border = "1px solid red";
       return;
     }
 
-    let model = document.getElementById("tph-model").value;
+    let Model = document.getElementById("tph-model").value;
 
-    if (model === "_custom") {
-      const customModel = document
+    if (Model === "_custom") {
+      const CustomModel = document
         .getElementById("tph-custom-model")
         .value.trim();
-      if (!customModel) {
+      if (!CustomModel) {
         alert("Please enter a custom model ID!");
         document.getElementById("tph-custom-model").style.border =
           "1px solid red";
         return;
       }
-      model = "custom:" + customModel;
+      Model = "custom:" + CustomModel;
     }
 
-    const useWebSearch = document.getElementById("tph-web-search").checked;
+    const UseWebSearch = document.getElementById("tph-web-search").checked;
+    const UseAntiBlur = document.getElementById("tph-anti-blur").checked;
 
-    localStorage.setItem("tph_web_search", useWebSearch);
+    localStorage.setItem("tph_web_search", UseWebSearch);
+    localStorage.setItem("tph_anti_blur", UseAntiBlur);
 
-    saveSettings({ apiKey, model }).then(() => {
+    saveSettings({ apiKey: ApiKey, model: Model, antiBlur: UseAntiBlur }).then(() => {
       alert("Settings saved!");
-      configWindow.remove();
+      ConfigWindow.remove();
     });
   });
 
@@ -239,7 +311,7 @@ function createConfigWindow() {
         "Warning: Without an API key, the extension will not work properly."
       );
     }
-    configWindow.remove();
+    ConfigWindow.remove();
   });
 }
 
